@@ -1,15 +1,29 @@
 from scipy.io import wavfile
 import numpy as np
+from numpy import transpose as tr
 import glob
 import os
 
 
 def filter(data):
     r = 4
-    a = np.ones(r)  # parameters of AR model 
+    theta = np.ones(r)  # vector of parameters of AR model 
+    P = np.ones((r, r))
+    lambda_f = 0.9  # forrgetting factor
     for n, sample in enumerate(data[r:], r):
+        phi = data[n-r:n][::-1]  # r previous samples
         # prediction for sample n, as linear combination of r previous samples
-        y_pred_n = np.sum(a*data[n-r:n][::-1])  # a[0]*y[n-1] + a[1]*y[n-2] + ...
+        y_pred_n = np.sum(theta*phi)  # a[0]*y[n-1] + a[1]*y[n-2] + ...
+
+        eps = sample-y_pred_n  # prediction error  
+
+        # New parameters
+        k = P @ phi / (lambda_f + tr(phi)@P@phi)
+        theta = theta + k*eps
+        P = 1/lambda_f * (P - P@phi@tr(phi)*P / (lambda_f + tr(phi)@P@phi))
+        # print(k)
+        
+        
 
     return 2*data
 
