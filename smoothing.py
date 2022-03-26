@@ -6,7 +6,13 @@ import os
 from matplotlib import pyplot as plt
 
 
-def filter(data, r):
+def filter(data, r=4):
+    """
+    Remove impulse noise from audio data using autoregressive model
+    @param data: original audio data
+    @param r: order of autoregressive model
+    @return: smoothed data - without impulse noise
+    """
     r = 4  # order of AR model
     theta = np.ones(r)  # vector of parameters of AR model 
     P = np.eye(r, dtype=np.float64)
@@ -14,7 +20,7 @@ def filter(data, r):
     smoothed_data = np.copy(data)
     M = 20
     last_errors = np.ones(M)*np.max(np.abs(data))  # array of last M errors - to calculate st deviation
-    std_dev = np.sqrt(np.sum(np.square(last_errors))/M)
+    std_dev = np.sqrt(np.sum(np.square(last_errors))/M)  # init standard deviation - very high
     corr_in_row = 0  # number of detected noise samples in a row
 
     for n, sample in enumerate(data[r:-1], r):
@@ -26,12 +32,13 @@ def filter(data, r):
 
         if np.abs(eps) < 3*std_dev: 
             # Good sample
+            # Update standard deviation 
             last_errors[:-1] = last_errors[1:]
             last_errors[-1] = eps  # shifting errors
             std_dev = np.sqrt(np.sum(np.square(last_errors))/M)
-
+            # Update parameters
             k = P @ phi / (lambda_f + tr(phi)@P@phi)
-            theta = theta + k*eps  # New parameters
+            theta = theta + k*eps  # New AR parameters
             P = 1/lambda_f * (P - P@phi@tr(phi)*P / (lambda_f + tr(phi)@P@phi))
             corr_in_row = 0
         else:
@@ -45,10 +52,6 @@ def filter(data, r):
 for filepath in glob.iglob('wav/*.wav'):
     # Read audio data
     samplerate, data = wavfile.read(filepath)
-
-    if filepath in []: # debug temp - choose files to process  'wav\\01.wav', 'wav\\02.wav', 'wav\\03.wav', 'wav\\04.wav' ,'wav\\05.wav', 
-        print(f"skipp: {filepath}")
-        continue
     new_data = filter(data, 4)
 
     # Write data without impulse noise to file
@@ -57,22 +60,12 @@ for filepath in glob.iglob('wav/*.wav'):
     wavfile.write(new_filepath, samplerate, new_data)
     print(new_filepath)
 
-    plt.subplot(2, 2, 1)
-    plt.plot(data)
-    plt.title("original")
-    plt.subplot(2, 2, 2)
-    plt.plot(new_data)
-    plt.title("smoothed")
-
-    plt.subplot(2, 2, 3)
+    # Plot original and smoothed data, save img
     plt.plot(data)
     plt.plot(new_data)
     plt.legend(["original", "smoothed"])
-
-    plt.subplot(2, 2, 4)
-    plt.plot(new_data)
-    plt.plot(data)
-    plt.legend(["smoothed", "original"])
+    plt.title("Audio: {}".format(basename))
+    plt.savefig('img\\img_{}.png'.format(basename))
     plt.show()
 
 
