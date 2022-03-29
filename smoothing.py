@@ -35,13 +35,12 @@ def filter(data, r=4):
         y_pred_n = np.sum(theta*phi)  # a[0]*y[n-1] + a[1]*y[n-2] + ...
 
         eps = sample-y_pred_n  # prediction error 
-
+        # Update standard deviation 
+        last_errors[:-1] = last_errors[1:]
+        last_errors[-1] = eps  # shifting errors
+        std_dev = np.sqrt(np.sum(np.square(last_errors))/M)
         if np.abs(eps) < 3*std_dev: 
             # Good sample
-            # Update standard deviation 
-            last_errors[:-1] = last_errors[1:]
-            last_errors[-1] = eps  # shifting errors
-            std_dev = np.sqrt(np.sum(np.square(last_errors))/M)
             # Update parameters
             k = P @ phi / (lambda_f + tr(phi)@P@phi)
             theta = theta + k*eps  # New AR parameters
@@ -51,18 +50,18 @@ def filter(data, r=4):
             # Noise sample
             smoothed_data[n] = 0.5*(data[n-1]+data[n+1])
             corr_in_row += 1
+            
         theta_arr[:, n] = theta
         std_dev_arr[n] = std_dev
 
     return smoothed_data, theta_arr, std_dev_arr
-
 
 for filepath in glob.iglob('wav/*.wav'):
     # Read audio data
     samplerate, data = wavfile.read(filepath)
     r = 4
     new_data, parameters, std_dev_arr = filter(data, r)
-
+    
     # Write data without impulse noise to file
     basename = os.path.basename(filepath)
     new_filepath = os.path.join("smoothed", os.path.splitext(basename)[0] + "_smoothed.wav")
