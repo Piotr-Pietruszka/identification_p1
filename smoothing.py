@@ -90,6 +90,3 @@ for filepath in glob.iglob('wav/*.wav'):
     plt.title("Standard Deviation - Audio: {}".format(basename))
     plt.savefig('img\\std_dev_{}.png'.format(basename))
     plt.show()
-
-
-
